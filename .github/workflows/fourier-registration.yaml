@@ -1,0 +1,43 @@
+name: Fourier custom audio registration on stock Xinference
+on:
+  push:
+    branches: [qa/fourier-audio-registry]
+    paths:
+      - 'fourier-registry-qa/**'
+      - '.github/workflows/fourier-registration.yaml'
+permissions:
+  contents: read
+jobs:
+  registration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: fourier-registry-qa
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install released 4.2.0 and CPU PyTorch
+        run: |
+          python -m pip -q install uv
+          uv pip install --system torch --index-url https://download.pytorch.org/whl/cpu
+          uv pip install --system 'xinference==4.2.0'
+      - name: Stock HTTP registration, restart, engine selector probes
+        working-directory: fourier-registry-qa
+        env:
+          XINFERENCE_AUTH_ADVANCED: '0'
+          XINFERENCE_ENABLE_VIRTUAL_ENV: '0'
+          XINFERENCE_DISABLE_METRICS: '1'
+          XINFERENCE_HOME: ${{ runner.temp }}/isolated-xinference-registry
+          HF_HUB_OFFLINE: '1'
+        run: python -u verify.py
+      - name: Save evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: registry-proof
+          path: |
+            fourier-registry-qa/receipt.json
+            fourier-registry-qa/server-*.log
+          if-no-files-found: warn
