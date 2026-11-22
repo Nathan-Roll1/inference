@@ -38,7 +38,7 @@ def session(index):
                 try:
                     if requests.get(url+'/models',timeout=3).ok:
                         break
-                except requests.ConnectionError:
+                except (requests.ConnectionError, requests.Timeout):
                     pass
                 time.sleep(1)
             else:
